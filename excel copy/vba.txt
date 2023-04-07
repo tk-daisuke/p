@@ -1,0 +1,134 @@
+Sub ExtractAndSort()
+
+    ' 変数を宣言
+    Dim SourceSheet As Worksheet
+    Dim DestinationSheet As Worksheet
+    Dim i As Long, j As Long, lastRow As Long, lastColumn As Long, targetDateColumn As Long
+    Dim targetDate As Date
+    Dim rowCount As Long
+
+    ' シフト表シートと出勤者リストシートを設定
+    Set SourceSheet = ThisWorkbook.Worksheets("シフト表")
+    Set DestinationSheet = ThisWorkbook.Worksheets("出勤者リスト")
+    
+    ' 出勤者リストシートをクリア
+    DestinationSheet.Cells.Clear
+
+    ' 抽出対象の日付を設定
+    targetDate = "2023/04/01" ' 必要に応じてこの日付を変更してください
+
+    ' シフト表シートの最後の行と最後の列を取得
+    lastRow = SourceSheet.Cells(SourceSheet.Rows.Count, 2).End(xlUp).Row
+    lastColumn = SourceSheet.Cells(1, SourceSheet.Columns.Count).End(xlToLeft).Column
+
+    ' ソースシートで対象日の列を見つける
+    For j = 3 To lastColumn
+        If SourceSheet.Cells(1, j).Value = targetDate Then
+            targetDateColumn = j
+            Exit For
+        End If
+    Next j
+
+    ' 対象日の出勤者の名前と勤怠を抽出
+    rowCount = 1
+    For i = 3 To lastRow
+        If IsNumeric(SourceSheet.Cells(i, targetDateColumn)) Then
+            rowCount = rowCount + 1
+            DestinationSheet.Cells(rowCount, 1).Value = SourceSheet.Cells(i, 2).Value
+            DestinationSheet.Cells(rowCount, 2).Value = SourceSheet.Cells(i, targetDateColumn).Value
+        End If
+    Next i
+
+    ' 勤怠で並べ替えを行う
+    DestinationSheet.Range("A1:B" & rowCount).Sort key1:=DestinationSheet.Range("B2"), order1:=xlAscending, Header:=xlYes
+
+    ' 出勤者リストシートにヘッダーを追加
+    DestinationSheet.Cells(1, 1).Value = "名前"
+    DestinationSheet.Cells(1, 2).Value = "勤怠"
+
+End Sub
+--
+Function GetWorkbook(ByVal workbookName As String) As Workbook
+    Dim wb As Workbook
+
+    On Error Resume Next
+    Set wb = Workbooks(workbookName)
+    On Error GoTo 0
+
+    If wb Is Nothing Then
+        Set wb = Workbooks.Open(workbookName, ReadOnly:=True)
+    End If
+
+    Set GetWorkbook = wb
+End Function
+
+Sub ExtractShifts()
+    Dim sourceWorkbook As Workbook
+    Dim sourceWorkbookName As String
+    Dim targetWorkbook As Workbook
+    Dim targetWorkbookName As String
+    Dim sourceWorksheet As Worksheet
+    Dim targetWorksheet As Worksheet
+    Dim settingsWorksheet As Worksheet
+    Dim lastRow As Long
+    Dim targetRow As Long
+    Dim lastSettingsRow As Long
+    Dim affiliationToFilter As String
+    Dim nameFilter() As Variant
+    Dim name As Variant
+    Dim i As Long
+    
+    sourceWorkbookName = "jj.xlsx"
+    targetWorkbookName = "ExtractShifts.xlsm"
+    
+    GetWorkbook (sourceWorkbookName)
+    
+    ' ソースブックとターゲットブックを設定
+    Set sourceWorkbook = Workbooks(sourceWorkbookName)
+    Set targetWorkbook = Workbooks(targetWorkbookName) ' ターゲットブック名を変更
+    Set sourceWorksheet = sourceWorkbook.Worksheets("Sheet2") ' ソースシート名を変更
+    Set targetWorksheet = targetWorkbook.Worksheets("シフト表") ' ターゲットシート名を変更
+    Set settingsWorksheet = targetWorkbook.Worksheets("設定") ' ターゲットシート設定シート名を変更
+
+
+    ' 特定の所属を入力
+    affiliationToFilter = "チームA"
+    
+    ' 設定シートから名前フィルタの配列を作成
+    lastSettingsRow = settingsWorksheet.Cells(settingsWorksheet.Rows.Count, "A").End(xlUp).Row
+    ReDim nameFilter(1 To lastSettingsRow)
+    For i = 2 To lastSettingsRow
+        nameFilter(i) = settingsWorksheet.Cells(i, 1).Value
+    Next i
+    
+    
+    targetWorksheet.Cells.Clear
+    sourceWorksheet.Rows(1).Copy targetWorksheet.Rows(1)
+    
+    ' ターゲットシートの最後の行を取得
+    targetRow = targetWorksheet.Cells(targetWorksheet.Rows.Count, "A").End(xlUp).Row + 1
+
+    ' ソースシートの最後の行を取得
+    lastRow = sourceWorksheet.Cells(sourceWorksheet.Rows.Count, "A").End(xlUp).Row
+
+
+    ' ソースシートの各行をループ
+    For i = 2 To lastRow
+        ' 特定の所属と名前をフィルター
+        If sourceWorksheet.Cells(i, 1).Value = affiliationToFilter Then
+            For Each name In nameFilter
+              Debug.Print (name)
+                If sourceWorksheet.Cells(i, 2).Value = name Then
+                    ' 行全体をコピー
+                    sourceWorksheet.Rows(i).Copy targetWorksheet.Rows(targetRow)
+
+                    ' ターゲットシートの次の行に移動
+                    targetRow = targetRow + 1
+                    Exit For
+                End If
+            Next name
+        End If
+    Next i
+
+End Sub
+
