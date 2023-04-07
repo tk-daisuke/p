@@ -63,6 +63,7 @@ Function GetWorkbook(ByVal workbookName As String) As Workbook
 End Function
 
 Sub ExtractShifts()
+    ' 変数を宣言
     Dim sourceWorkbook As Workbook
     Dim sourceWorkbookName As String
     Dim targetWorkbook As Workbook
@@ -73,11 +74,11 @@ Sub ExtractShifts()
     Dim lastRow As Long
     Dim targetRow As Long
     Dim lastSettingsRow As Long
-    Dim affiliationToFilter As String
     Dim nameFilter() As Variant
     Dim name As Variant
     Dim i As Long
     
+    ' ワークブック名を設定
     sourceWorkbookName = "jj.xlsx"
     targetWorkbookName = "ExtractShifts.xlsm"
     
@@ -85,15 +86,11 @@ Sub ExtractShifts()
     
     ' ソースブックとターゲットブックを設定
     Set sourceWorkbook = Workbooks(sourceWorkbookName)
-    Set targetWorkbook = Workbooks(targetWorkbookName) ' ターゲットブック名を変更
-    Set sourceWorksheet = sourceWorkbook.Worksheets("Sheet2") ' ソースシート名を変更
-    Set targetWorksheet = targetWorkbook.Worksheets("シフト表") ' ターゲットシート名を変更
-    Set settingsWorksheet = targetWorkbook.Worksheets("設定") ' ターゲットシート設定シート名を変更
+    Set targetWorkbook = Workbooks(targetWorkbookName)
+    Set sourceWorksheet = sourceWorkbook.Worksheets("Sheet2")
+    Set targetWorksheet = targetWorkbook.Worksheets("シフト表")
+    Set settingsWorksheet = targetWorkbook.Worksheets("設定")
 
-
-    ' 特定の所属を入力
-    affiliationToFilter = "チームA"
-    
     ' 設定シートから名前フィルタの配列を作成
     lastSettingsRow = settingsWorksheet.Cells(settingsWorksheet.Rows.Count, "A").End(xlUp).Row
     ReDim nameFilter(1 To lastSettingsRow)
@@ -101,8 +98,10 @@ Sub ExtractShifts()
         nameFilter(i) = settingsWorksheet.Cells(i, 1).Value
     Next i
     
-    
+    ' ターゲットシートの内容をクリア
     targetWorksheet.Cells.Clear
+    
+    ' ソースシートのヘッダー行をコピー
     sourceWorksheet.Rows(1).Copy targetWorksheet.Rows(1)
     
     ' ターゲットシートの最後の行を取得
@@ -111,24 +110,20 @@ Sub ExtractShifts()
     ' ソースシートの最後の行を取得
     lastRow = sourceWorksheet.Cells(sourceWorksheet.Rows.Count, "A").End(xlUp).Row
 
-
     ' ソースシートの各行をループ
     For i = 2 To lastRow
-        ' 特定の所属と名前をフィルター
-        If sourceWorksheet.Cells(i, 1).Value = affiliationToFilter Then
-            For Each name In nameFilter
-              Debug.Print (name)
-                If sourceWorksheet.Cells(i, 2).Value = name Then
-                    ' 行全体をコピー
-                    sourceWorksheet.Rows(i).Copy targetWorksheet.Rows(targetRow)
+        ' 名前フィルターをループ
+        For Each name In nameFilter
+            ' 名前がフィルターと一致する場合
+            If sourceWorksheet.Cells(i, 2).Value = name Then
+                ' 行全体をコピー
+                sourceWorksheet.Rows(i).Copy targetWorksheet.Rows(targetRow)
 
-                    ' ターゲットシートの次の行に移動
-                    targetRow = targetRow + 1
-                    Exit For
-                End If
-            Next name
-        End If
+                ' ターゲットシートの次の行に移動
+                targetRow = targetRow + 1
+                Exit For
+            End If
+        Next name
     Next i
-
 End Sub
 
