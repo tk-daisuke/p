@@ -4,49 +4,39 @@ Sub ExtractAndSort()
     Dim SourceSheet As Worksheet
     Dim DestinationSheet As Worksheet
     Dim i As Long, j As Long, lastRow As Long, lastColumn As Long, targetDateColumn As Long
-    Dim targetDate As Date
     Dim rowCount As Long
+    Dim targetDate As Date
 
     ' シフト表シートと出勤者リストシートを設定
     Set SourceSheet = ThisWorkbook.Worksheets("シフト表")
     Set DestinationSheet = ThisWorkbook.Worksheets("出勤者リスト")
-    
-    ' 出勤者リストシートをクリア
-    DestinationSheet.Cells.Clear
-
-    ' 抽出対象の日付を設定
-    targetDate = "2023/04/01" ' 必要に応じてこの日付を変更してください
 
     ' シフト表シートの最後の行と最後の列を取得
     lastRow = SourceSheet.Cells(SourceSheet.Rows.Count, 2).End(xlUp).Row
     lastColumn = SourceSheet.Cells(1, SourceSheet.Columns.Count).End(xlToLeft).Column
 
-    ' ソースシートで対象日の列を見つける
+    ' 出勤者リストシートをクリア
+    DestinationSheet.Cells.Clear
+
+    ' 日付ごとに横に並べて出力
     For j = 3 To lastColumn
-        If SourceSheet.Cells(1, j).Value = targetDate Then
-            targetDateColumn = j
-            Exit For
-        End If
+        targetDate = SourceSheet.Cells(1, j).Value
+        DestinationSheet.Cells(1, (j - 2) * 2).Value = targetDate
+
+        ' 対象日の出勤者の名前と勤怠を抽出
+        rowCount = 1
+        For i = 2 To lastRow
+            If IsNumeric(SourceSheet.Cells(i, j)) Then
+                rowCount = rowCount + 1
+                DestinationSheet.Cells(rowCount, (j - 2) * 2).Value = SourceSheet.Cells(i, 2).Value
+                DestinationSheet.Cells(rowCount, (j - 2) * 2 + 1).Value = SourceSheet.Cells(i, j).Value
+            End If
+        Next i
     Next j
 
-    ' 対象日の出勤者の名前と勤怠を抽出
-    rowCount = 1
-    For i = 3 To lastRow
-        If IsNumeric(SourceSheet.Cells(i, targetDateColumn)) Then
-            rowCount = rowCount + 1
-            DestinationSheet.Cells(rowCount, 1).Value = SourceSheet.Cells(i, 2).Value
-            DestinationSheet.Cells(rowCount, 2).Value = SourceSheet.Cells(i, targetDateColumn).Value
-        End If
-    Next i
-
-    ' 勤怠で並べ替えを行う
-    DestinationSheet.Range("A1:B" & rowCount).Sort key1:=DestinationSheet.Range("B2"), order1:=xlAscending, Header:=xlYes
-
-    ' 出勤者リストシートにヘッダーを追加
-    DestinationSheet.Cells(1, 1).Value = "名前"
-    DestinationSheet.Cells(1, 2).Value = "勤怠"
-
 End Sub
+
+
 --
 Function GetWorkbook(ByVal workbookName As String) As Workbook
     Dim wb As Workbook
