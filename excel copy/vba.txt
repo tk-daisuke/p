@@ -1,163 +1,58 @@
-Function GetWorkbook(ByVal workbookName As String) As Workbook
-    Dim wb As Workbook
+Sub test()
+ Dim mailLastRow As Long
+ 
+ mailLastRow = ExtractFeedback(40, "John")
+ Debug.Print mailLastRow
 
-    On Error Resume Next
-    Set wb = Workbooks(workbookName)
-    On Error GoTo 0
-
-    If wb Is Nothing Then
-        Set wb = Workbooks.Open(workbookName, ReadOnly:=True)
-    End If
-
-    Set GetWorkbook = wb
-End Function
-
-Sub ExtractShifts()
-    ' 変数を宣言
-    Dim sourceWorkbook As Workbook
-    Dim sourceWorkbookName As String
-    Dim targetWorkbook As Workbook
-    Dim targetWorkbookName As String
-    Dim sourceWorksheet As Worksheet
-    Dim targetWorksheet As Worksheet
-    Dim settingsWorksheet As Worksheet
-    Dim lastRow As Long
-    Dim targetRow As Long
-    Dim lastSettingsRow As Long
-    Dim nameFilter() As Variant
-    Dim name As Variant
-    Dim i As Long
-    
-    ' ワークブック名を設定
-    sourceWorkbookName = "jj.xlsx"
-    targetWorkbookName = "ExtractShifts.xlsm"
-    
-    ' 確認ダイアログ
-    If MsgBox("実行しますか？時間がかかります。", vbYesNo) = vbNo Then
-        Exit Sub
-    End If
-    
-    ' 画面の更新を停止
-    Application.ScreenUpdating = False
-    
-    GetWorkbook (sourceWorkbookName)
-    
-    ' ソースブックとターゲットブックを設定
-    Set sourceWorkbook = Workbooks(sourceWorkbookName)
-    Set targetWorkbook = Workbooks(targetWorkbookName)
-    Set sourceWorksheet = sourceWorkbook.Worksheets("4月")
-    Set targetWorksheet = targetWorkbook.Worksheets("シフト表")
-    Set settingsWorksheet = targetWorkbook.Worksheets("設定")
-
-    ' 設定シートから名前フィルタの配列を作成
-    lastSettingsRow = settingsWorksheet.Cells(settingsWorksheet.Rows.Count, "A").End(xlUp).Row
-    ReDim nameFilter(1 To lastSettingsRow)
-    For i = 2 To lastSettingsRow
-        nameFilter(i) = settingsWorksheet.Cells(i, 1).Value
-    Next i
-    
-    ' ターゲットシートの内容をクリア
-    targetWorksheet.Cells.Clear
-    
-    ' ソースシートのヘッダー行をコピー
-    sourceWorksheet.Rows(1).Copy targetWorksheet.Rows(1)
-    
-    ' ターゲットシートの最後の行を取得
-    targetRow = targetWorksheet.Cells(targetWorksheet.Rows.Count, "A").End(xlUp).Row + 1
-
-    ' ソースシートの最後の行を取得
-    lastRow = sourceWorksheet.Cells(sourceWorksheet.Rows.Count, "A").End(xlUp).Row
-
-    ' ソースシートの各行をループ
-    For i = 2 To lastRow
-        ' 名前フィルターをループ
-        For Each name In nameFilter
-            ' 名前がフィルターと一致する場合
-            If sourceWorksheet.Cells(i, 2).Value = name Then
-                ' 行全体をコピー
-                sourceWorksheet.Rows(i).Copy targetWorksheet.Rows(targetRow)
-
-                ' ターゲットシートの次の行に移動
-                targetRow = targetRow + 1
-                Exit For
-            End If
-        Next name
-    Next i
-    Call ExtractAndSort3
-
-    
-    settingsWorksheet.Range("C1").Value = sourceWorksheet.name
-    
-    ' 画面の更新を再開
-    Application.ScreenUpdating = True
-    
-    
-    MsgBox ("完了しました。件数" & targetRow - 2)
 End Sub
 
-Sub ExtractAndSort3()
-
-    ' 変数を宣言
-    Dim SourceSheet As Worksheet
-    Dim DestinationSheet As Worksheet
-    Dim i As Long, j As Long, lastRow As Long, lastColumn As Long
-    Dim rowCount As Long
-    Dim withoutEng As Variant
-    Dim withoutEngDate As Date
+Private Function createMail()
+    'OutlookのMailitemオブジェクトを取得する
+    Dim ol As Outlook.Application
+    Dim mi As Outlook.MailItem
+    Set ol = New Outlook.Application
+    Set mi = ol.CreateItem(olMailItem)
     
-    ' シフト表シートと出勤者リストシートを設定
-    Set SourceSheet = ThisWorkbook.Worksheets("シフト表")
-    Set DestinationSheet = ThisWorkbook.Worksheets("シフト表toデータ")
-
-
-    
-    ' 出勤者リストシートをクリア
-    DestinationSheet.Cells.Clear
-
-    ' シフト表シートの最後の行と最後の列を取得
-    lastRow = SourceSheet.Cells(SourceSheet.Rows.Count, 2).End(xlUp).Row
-    lastColumn = SourceSheet.Cells(1, SourceSheet.Columns.Count).End(xlToLeft).Column
-
-    ' ヘッダー行を設定
-    DestinationSheet.Cells(1, 1).Value = "日付"
-    DestinationSheet.Cells(1, 2).Value = "DATE"
-    DestinationSheet.Cells(1, 3).Value = "名前"
-    DestinationSheet.Cells(1, 4).Value = "勤怠"
-
-    ' 出力行のカウントを初期化
-    rowCount = 1
-    
-    ' シフト表シートの各行をループ
-    For i = 2 To lastRow
-        ' 各列をループ
-        For j = 3 To lastColumn
-           
-            ' 出勤時間を取得し、アルファベットを削除
-            withoutEng = Val(SourceSheet.Cells(i, j))
-            If IsNumeric(withoutEng) And Not SourceSheet.Cells(i, j) = "有給" And Not SourceSheet.Cells(i, j) = "公" Then
-                ' 日付と出勤時間からDATEを作成
-                withoutEngDate = DateSerial(Year(SourceSheet.Cells(1, j).Value), Month(SourceSheet.Cells(1, j).Value), Day(SourceSheet.Cells(1, j).Value)) + TimeSerial(withoutEng, 0, 0)
-                
-                ' 出力行を増やす
-                rowCount = rowCount + 1
-                
-                ' 日付、DATE、名前、勤怠を出力
-                DestinationSheet.Cells(rowCount, 1).Value = withoutEngDate
-                DestinationSheet.Cells(rowCount, 2).Value = SourceSheet.Cells(1, j).Value
-                DestinationSheet.Cells(rowCount, 3).Value = SourceSheet.Cells(i, 2).Value
-                Debug.Print withoutEng
-                DestinationSheet.Cells(rowCount, 4).Value = SourceSheet.Cells(i, j) & "出"
-            End If
-        Next j
-    Next i
-    
-    With DestinationSheet.Sort
-        .SortFields.Clear
-        .SortFields.Add Key:=Range("A2"), Order:=xlAscending
-        .SetRange Range("A1:D" & rowCount)
-        .Header = xlYes
-        .Apply
+    With mi
+        .To = "xxxxx@gmail.com"     '宛先
+        .CC = "yyyyyyyy@gmail.com"     'CC
+        .Subject = "ここに件名を指定します" '件名
+        .Body = "ここに本文を指定します。"  '本文
+        .Display    '新規メール画面を表示
     End With
-End Sub
+    
+End Function
+Private Function ExtractFeedback(ByVal wk As String, ByVal byName As String) As Long
+    Dim mailWs As Worksheet
+    Dim listWs As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim j As Long
+    
+    Set mailWs = ThisWorkbook.Worksheets("メール")
+    Set listWs = ThisWorkbook.Worksheets("リスト")
+    
+    ' mailシートのスタート行を指定
+    j = 8
+    
+    ' mailシートの内容をクリア
+    mailWs.Range(mailWs.Cells(j, 1), mailWs.Cells(j + 100, 5)).Clear
 
+    
+    ' データの最終行を取得
+    lastRow = listWs.Cells(listWs.Rows.Count, "A").End(xlUp).Row
+    
+    ' 行のループ
+    For i = 2 To lastRow ' ヘッダー行を除くデータ行をループ
+        If listWs.Cells(i, 1).Value = wk And listWs.Cells(i, 3).Value = byName Then
+            
+        
+           mailWs.Range(mailWs.Cells(j, 1), mailWs.Cells(j, 5)).Value = listWs.Range(listWs.Cells(i, 1), listWs.Cells(i, 5)).Value
+           
+           j = j + 1
+        End If
+    Next i
+    ExtractFeedback = j
+    
+End Function
 
